@@ -164,6 +164,9 @@ def main():
     )
 
     uploaded_file = st.file_uploader("Upload historical_matches.csv", type=["csv"])
+    app_dir = Path(__file__).resolve().parent
+    demo_data_path = app_dir / "data" / "demo_historical_matches.csv"
+
     if uploaded_file is not None:
         try:
             matches_df = pd.read_csv(uploaded_file)
@@ -171,7 +174,16 @@ def main():
             st.error(f"Unable to read upload: {exc}")
             return
     else:
-        matches_df = pd.read_csv("data/demo_historical_matches.csv")
+        if not demo_data_path.exists() or not demo_data_path.is_file():
+            st.warning(
+                "Demo data is unavailable in this deployment. Please upload your own historical_matches.csv file."
+            )
+            return
+        try:
+            matches_df = pd.read_csv(demo_data_path)
+        except Exception as exc:
+            st.error(f"Unable to read demo dataset: {exc}")
+            return
 
     try:
         model_engine = get_model_engine()
