@@ -175,33 +175,16 @@ def main():
         "Build fair soccer probabilities from your historical data, compare to Kalshi prices, and identify potential edges."
     )
 
-    with st.sidebar.expander("Optional model tuning and market reference", expanded=False):
-        half_life_days = st.slider(
-            "Recency half-life (days)", min_value=30, max_value=365, value=90, step=10
-        )
-        home_advantage_goals = st.slider(
-            "Home advantage (goals)", min_value=0.0, max_value=1.0, value=0.25, step=0.05
-        )
-        draw_tiebreaker = st.slider(
-            "Draw advance strength", min_value=0.0, max_value=1.0, value=0.5, step=0.05,
-            help="How strongly a draw favors the higher Elo team in an advance scenario."
-        )
-        team_a_adjustment = st.slider(
-            "Team A adjustment", min_value=-0.25, max_value=0.25, value=0.0, step=0.01,
-            help="Adjust expected goals up or down for Team A based on lineup or news."
-        )
-        team_b_adjustment = st.slider(
-            "Team B adjustment", min_value=-0.25, max_value=0.25, value=0.0, step=0.01,
-            help="Adjust expected goals up or down for Team B based on lineup or news."
-        )
-        kalshi_price_cents = st.slider(
-            "Kalshi YES price (cents)", min_value=0.0, max_value=100.0, value=50.0, step=0.5,
-            help="Optional reference price for edge calculations. Leave at 50 if you just want probabilities."
-        )
-        n_sims = st.number_input(
-            "Monte Carlo simulations", min_value=1000, max_value=20000, value=5000, step=500
-        )
-    st.sidebar.write("Select a match and market on the main screen. Advanced options are available if needed.")
+    # Fixed model settings: match selection drives the output, not manual tuning.
+    half_life_days = 90
+    home_advantage_goals = 0.25
+    draw_tiebreaker = 0.5
+    team_a_adjustment = 0.0
+    team_b_adjustment = 0.0
+    kalshi_price_cents = 50.0
+    n_sims = 5000
+
+    st.sidebar.write("Select a match and a market on the main screen. Model tuning is fixed for all games.")
 
     uploaded_file = st.file_uploader("Upload historical_matches.csv", type=["csv"])
     app_dir = Path(__file__).resolve().parent
@@ -266,26 +249,30 @@ def main():
     else:
         st.info("Upload advanced match stats if available (xG, shots, possession, pass accuracy, corners, fouls) for a stronger model.")
 
-    teams = sorted(set(matches_df["home_team"]).union(matches_df["away_team"]))
-    if len(teams) < 2:
-        st.warning("Not enough unique teams in data.")
+    if matches_df.shape[0] == 0:
+        st.warning("No matches available in the uploaded dataset.")
         return
+
+    matches_df = matches_df.sort_values(["date", "home_team", "away_team"]).reset_index(drop=True)
+    game_choices = [
+        f"{row['date'].date()} — {row['home_team']} vs {row['away_team']} ({row['competition']})"
+        for _, row in matches_df.iterrows()
+    ]
 
     st.write(f"Loaded {len(matches_df)} historical matches.")
     with st.expander("Preview historical data"):
         st.dataframe(matches_df.head(10))
 
-    col1, col2 = st.columns(2)
-    with col1:
-        team_a = st.selectbox("Team A", teams, index=0)
-    with col2:
-        team_b = st.selectbox("Team B", teams, index=1 if len(teams) > 1 else 0)
-
-    if team_a == team_b:
-        st.warning("Please choose two different teams for Team A and Team B.")
-        return
-
-    neutral = st.radio("Neutral site?", ["Yes", "No"]) == "Yes"
+    selected_game = st.selectbox("Select a match", game_choices, index=0)
+    selected_idx = game_choices.index(selected_game)
+    match_row = matches_df.loc[selected_idx]
+    team_a = match_row["home_team"]
+    team_b = match_row["away_team"]
+    neutral = bool(match_row["neutral"])
+    st.markdown(
+        f"**Selected match:** {match_row['date'].date()} — {team_a} vs {team_b} | "
+        f"{match_row['competition']} | {'Neutral' if neutral else 'Home advantage'}"
+    )
     market = st.selectbox("Select market", MARKET_OPTIONS)
 
     model = model_engine.build_team_model(
@@ -312,7 +299,6 @@ def main():
     else:
         selected_score = None
 
-    kalshi_prob = float(min(max(kalshi_price_cents / 100.0, 0.0), 1.0))
     if market == "Team A advance":
         fair_prob = simulation["advance_a"]
     elif market == "Team A regulation win":
@@ -349,7 +335,7 @@ def main():
         fair_prob = 0.0
 
     fair_decimal = model_engine.fair_decimal(fair_prob)
-    edge = model_engine.compare_to_kalshi(fair_prob, kalshi_prob)
+    edge = model_engine.compare_to_kalshi(fair_prob, kalshi_price_cents / 100.0)
     edge_pct = edge * 100.0
     verdict = verdict_from_edge(edge_pct)
     insight = model_engine.market_insight(market, simulation, team_a, team_b, neutral)
@@ -357,7 +343,7 @@ def main():
     st.header("Thiago value output")
     st.metric("Thiago fair probability", format_percentage(fair_prob))
     st.metric("Fair decimal odds", fair_decimal)
-    st.metric("Kalshi probability", format_percentage(kalshi_prob))
+    st.metric("Kalshi probability", format_percentage(kalshi_price_cents / 100.0))
     st.metric("Edge (percentage points)", f"{edge_pct:+.2f}")
     st.write(f"**Verdict:** {verdict}")
     st.info(
