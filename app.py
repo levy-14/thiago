@@ -1,25 +1,18 @@
 import sys
 from pathlib import Path
+import importlib.util
 
 import streamlit as st
 import pandas as pd
 
 ROOT_DIR = Path(__file__).resolve().parent
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
+MODEL_PATH = ROOT_DIR / "model_engine.py"
+if not MODEL_PATH.exists():
+    raise FileNotFoundError(f"model_engine.py not found in {ROOT_DIR}")
 
-try:
-    import model_engine
-except ModuleNotFoundError:
-    import importlib.util
-
-    module_path = ROOT_DIR / "model_engine.py"
-    if not module_path.exists():
-        raise
-
-    spec = importlib.util.spec_from_file_location("model_engine", module_path)
-    model_engine = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(model_engine)
+spec = importlib.util.spec_from_file_location("model_engine", MODEL_PATH)
+model_engine = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(model_engine)
 
 
 MARKET_OPTIONS = [
