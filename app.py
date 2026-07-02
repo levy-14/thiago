@@ -6,18 +6,36 @@ import streamlit as st
 import pandas as pd
 
 def load_model_engine():
-    current_dir = Path(__file__).resolve().parent
-    candidates = [
+    current_file = Path(__file__).resolve()
+    current_dir = current_file.parent
+    sys_path_dirs = [Path(p) for p in sys.path if p and Path(p).exists()]
+    candidates = []
+
+    # Common deployment roots and repository layouts
+    candidates.extend([
         current_dir,
         current_dir.parent,
         current_dir / "src",
         current_dir.parent / "src",
+        current_dir / "thiago",
+        current_dir.parent / "thiago",
         Path.cwd(),
         Path.cwd().parent,
-    ]
+    ])
+
+    # Include all parent folders to catch nested deploy roots
+    candidates.extend(current_dir.parents)
+    candidates.extend(Path.cwd().resolve().parents)
+    candidates.extend(sys_path_dirs)
+
+    # Preserve order and remove duplicates
+    ordered_candidates = []
+    for path in candidates:
+        if path not in ordered_candidates:
+            ordered_candidates.append(path)
 
     searched_paths = []
-    for base in candidates:
+    for base in ordered_candidates:
         for path in [
             base / "model_engine.py",
             base / "thiago" / "model_engine.py",
@@ -25,21 +43,31 @@ def load_model_engine():
             base / "src" / "thiago" / "model_engine.py",
         ]:
             if path.exists():
+                sys.path.insert(0, str(path.parent))
                 spec = importlib.util.spec_from_file_location("model_engine", path)
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
                 return module
             searched_paths.append(path)
 
-    for path in current_dir.rglob("model_engine.py"):
-        spec = importlib.util.spec_from_file_location("model_engine", path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
+    # Recursive fallback so nested layouts can still be discovered
+    for base in ordered_candidates:
+        if base.exists():
+            for path in base.rglob("model_engine.py"):
+                sys.path.insert(0, str(path.parent))
+                spec = importlib.util.spec_from_file_location("model_engine", path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                return module
 
-    searched_text = "\n".join(str(path) for path in searched_paths)
+    searched_text = "\n".join(str(path) for path in searched_paths[:200])
+    debug_dirs = "\n".join(f"{path} (exists={path.exists()})" for path in ordered_candidates[:50])
     raise FileNotFoundError(
-        "model_engine.py could not be found in the deployment. Searched these locations:\n" + searched_text
+        "model_engine.py could not be found in the deployment. Searched these locations:\n"
+        f"{searched_text}\n\n"
+        "Candidate search directories:\n"
+        f"{debug_dirs}\n"
+        "If you are deploying to Streamlit Cloud, ensure that `model_engine.py` is included in the app bundle and lives alongside `app.py` or under a discovered source path."
     )
 
 model_engine = load_model_engine()
