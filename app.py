@@ -70,7 +70,34 @@ def load_model_engine():
         "If you are deploying to Streamlit Cloud, ensure that `model_engine.py` is included in the app bundle and lives alongside `app.py` or under a discovered source path."
     )
 
-model_engine = load_model_engine()
+_loaded_model_engine = None
+
+
+def get_model_engine():
+    global _loaded_model_engine
+    if _loaded_model_engine is None:
+        _loaded_model_engine = load_model_engine()
+    return _loaded_model_engine
+
+
+def _render_loader_diagnostics():
+    current_file = Path(__file__).resolve()
+    current_dir = current_file.parent
+    candidates = [
+        current_dir,
+        current_dir.parent,
+        Path.cwd(),
+        Path.cwd().parent,
+    ]
+    candidate_info = []
+    for candidate in candidates:
+        if candidate.exists():
+            candidate_info.append(
+                f"{candidate}: exists, items={len(list(candidate.iterdir()))}"
+            )
+        else:
+            candidate_info.append(f"{candidate}: does not exist")
+    return "\n".join(candidate_info)
 
 
 MARKET_OPTIONS = [
@@ -145,6 +172,19 @@ def main():
             return
     else:
         matches_df = pd.read_csv("data/demo_historical_matches.csv")
+
+    try:
+        model_engine = get_model_engine()
+    except FileNotFoundError as exc:
+        st.error("Unable to load the model engine module.")
+        st.code(str(exc))
+        st.write("Streamlit deployment may be mounting a different source root than expected.")
+        st.write("Current loader diagnostics:")
+        st.code(_render_loader_diagnostics())
+        return
+    except Exception as exc:
+        st.error(f"Unexpected model engine load failure: {exc}")
+        return
 
     try:
         matches_df = model_engine.load_matches(matches_df)
