@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from io import StringIO
 import importlib.util
 
 import streamlit as st
@@ -118,6 +119,19 @@ MARKET_OPTIONS = [
     "Correct score",
 ]
 
+DEFAULT_DEMO_CSV = """date,home_team,away_team,home_goals,away_goals,neutral,competition,home_shots,away_shots,home_shots_on_target,away_shots_on_target,home_corners,away_corners,home_fouls,away_fouls,home_possession,away_possession,home_pass_accuracy,away_pass_accuracy,home_xg,away_xg,home_goal_scorers,away_goal_scorers
+2023-10-05,Spain,Germany,2,1,no,UEFA Nations League,14,9,6,4,7,3,8,12,59,41,86,79,1.9,1.1,Alvarez,Musiala
+2023-10-08,France,England,1,2,no,UEFA Nations League,13,16,5,7,6,5,11,10,52,48,84,82,1.3,1.7,Benzema,Kane,Mount
+2023-10-11,Brazil,Argentina,2,0,no,World Cup Qualifier,18,7,8,2,9,2,6,14,62,38,88,76,2.4,0.7,Richarlison,Messi
+2023-10-14,Italy,Portugal,0,1,no,European Championship Qualifier,10,12,3,5,4,6,9,11,47,53,79,80,0.6,1.0,Ronaldo,
+2023-10-17,USA,Canada,3,1,no,CONCACAF Gold Cup Qualifier,17,10,7,4,8,4,11,13,58,42,81,77,2.1,0.9,Brady,Weah
+2023-10-20,Colombia,Uruguay,1,0,no,World Cup Qualifier,11,8,5,3,4,4,12,10,54,46,78,80,1.0,0.6,Borre,
+2023-10-23,Spain,Portugal,3,2,no,UEFA Nations League,20,15,10,6,10,5,9,14,61,39,87,78,2.7,1.9,Alvarez,Silva
+2023-10-26,France,Belgium,0,1,no,UEFA Nations League,12,14,4,5,6,6,10,11,53,47,82,81,0.8,1.3,DeBruyne,
+2023-10-29,Brazil,Spain,1,1,yes,International Friendly,16,13,6,5,8,5,8,9,55,45,85,80,1.4,1.1,Neymar,Alvarez
+2023-11-02,England,Germany,2,2,no,UEFA Nations League,18,17,9,8,7,6,12,12,57,43,86,84,2.2,2.0,Kane,Musiala
+"""
+
 
 def format_percentage(value):
     return f"{value * 100:.2f}%"
@@ -197,16 +211,19 @@ def main():
             st.error(f"Unable to read upload: {exc}")
             return
     else:
-        if not demo_data_path.exists() or not demo_data_path.is_file():
-            st.warning(
-                "Demo data is unavailable in this deployment. Please upload your own historical_matches.csv file."
-            )
-            return
-        try:
-            matches_df = pd.read_csv(demo_data_path)
-        except Exception as exc:
-            st.error(f"Unable to read demo dataset: {exc}")
-            return
+        if demo_data_path.exists() and demo_data_path.is_file():
+            try:
+                matches_df = pd.read_csv(demo_data_path)
+            except Exception as exc:
+                st.error(f"Unable to read demo dataset: {exc}")
+                return
+        else:
+            try:
+                matches_df = pd.read_csv(StringIO(DEFAULT_DEMO_CSV))
+                st.info("Using built-in demo dataset because the deployed data file is unavailable.")
+            except Exception as exc:
+                st.error(f"Unable to load built-in demo dataset: {exc}")
+                return
 
     try:
         model_engine = get_model_engine()
