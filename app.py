@@ -8,24 +8,38 @@ import pandas as pd
 def load_model_engine():
     current_dir = Path(__file__).resolve().parent
     candidates = [
-        current_dir / "model_engine.py",
-        current_dir.parent / "model_engine.py",
-        current_dir / "src" / "model_engine.py",
-        current_dir.parent / "src" / "model_engine.py",
-        Path.cwd() / "model_engine.py",
-        Path.cwd().parent / "model_engine.py",
+        current_dir,
+        current_dir.parent,
+        current_dir / "src",
+        current_dir.parent / "src",
+        Path.cwd(),
+        Path.cwd().parent,
     ]
 
-    for path in candidates:
-        if path.exists():
-            spec = importlib.util.spec_from_file_location("model_engine", path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            return module
+    searched_paths = []
+    for base in candidates:
+        for path in [
+            base / "model_engine.py",
+            base / "thiago" / "model_engine.py",
+            base / "src" / "model_engine.py",
+            base / "src" / "thiago" / "model_engine.py",
+        ]:
+            if path.exists():
+                spec = importlib.util.spec_from_file_location("model_engine", path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                return module
+            searched_paths.append(path)
 
-    searched = "\n".join(str(path) for path in candidates)
+    for path in current_dir.rglob("model_engine.py"):
+        spec = importlib.util.spec_from_file_location("model_engine", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    searched_text = "\n".join(str(path) for path in searched_paths)
     raise FileNotFoundError(
-        "model_engine.py could not be found. Searched these locations:\n" + searched
+        "model_engine.py could not be found in the deployment. Searched these locations:\n" + searched_text
     )
 
 model_engine = load_model_engine()
