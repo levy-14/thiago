@@ -121,7 +121,7 @@ MARKET_OPTIONS = [
 
 DEFAULT_DEMO_CSV = """date,home_team,away_team,home_goals,away_goals,neutral,competition,home_shots,away_shots,home_shots_on_target,away_shots_on_target,home_corners,away_corners,home_fouls,away_fouls,home_possession,away_possession,home_pass_accuracy,away_pass_accuracy,home_xg,away_xg,home_goal_scorers,away_goal_scorers
 2023-10-05,Spain,Germany,2,1,no,UEFA Nations League,14,9,6,4,7,3,8,12,59,41,86,79,1.9,1.1,Alvarez,Musiala
-2023-10-08,France,England,1,2,no,UEFA Nations League,13,16,5,7,6,5,11,10,52,48,84,82,1.3,1.7,Benzema,Kane,Mount
+2023-10-08,France,England,1,2,no,UEFA Nations League,13,16,5,7,6,5,11,10,52,48,84,82,1.3,1.7,Benzema,"Kane,Mount"
 2023-10-11,Brazil,Argentina,2,0,no,World Cup Qualifier,18,7,8,2,9,2,6,14,62,38,88,76,2.4,0.7,Richarlison,Messi
 2023-10-14,Italy,Portugal,0,1,no,European Championship Qualifier,10,12,3,5,4,6,9,11,47,53,79,80,0.6,1.0,Ronaldo,
 2023-10-17,USA,Canada,3,1,no,CONCACAF Gold Cup Qualifier,17,10,7,4,8,4,11,13,58,42,81,77,2.1,0.9,Brady,Weah
