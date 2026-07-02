@@ -109,6 +109,8 @@ MARKET_OPTIONS = [
     "Draw",
     "Over 2.5 goals",
     "Under 2.5 goals",
+    "Over 3.5 goals",
+    "Under 1.5 goals",
     "BTTS Yes",
     "BTTS No",
     "Team A over 1.5 goals",
@@ -133,6 +135,39 @@ def verdict_from_edge(edge_pct):
     return "STRONG CONSIDERATION"
 
 
+def build_market_summary(simulation, kalshi_prob=None):
+    market_map = {
+        "Team A advance": "advance_a",
+        "Team A regulation win": "regulation_win_a",
+        "Team A -1.5": "team_a_minus_1_5",
+        "Team B regulation win": "regulation_win_b",
+        "Team B -1.5": "team_b_minus_1_5",
+        "Draw": "regulation_draw",
+        "Over 2.5 goals": "over_2_5",
+        "Under 2.5 goals": "under_2.5",
+        "Over 3.5 goals": "over_3_5",
+        "Under 1.5 goals": "under_1_5",
+        "BTTS Yes": "btts_yes",
+        "BTTS No": "btts_no",
+        "Team A over 1.5 goals": "team_a_over_1.5",
+        "Team B over 0.5 goals": "team_b_over_0.5",
+    }
+    rows = []
+    for market, key in market_map.items():
+        probability = float(simulation.get(key, 0.0))
+        row = {
+            "Market": market,
+            "Thiago fair probability": probability,
+            "Thiago fair decimal": format_percentage(probability),
+            "Thiago fair odds": model_engine.fair_decimal(probability),
+        }
+        if kalshi_prob is not None:
+            edge = model_engine.compare_to_kalshi(probability, kalshi_prob)
+            row["Edge vs Kalshi"] = f"{edge * 100:+.2f}%"
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def main():
     st.set_page_config(page_title="Thiago Engine", layout="wide")
     st.title("Thiago Engine")
@@ -140,28 +175,33 @@ def main():
         "Build fair soccer probabilities from your historical data, compare to Kalshi prices, and identify potential edges."
     )
 
-    st.sidebar.header("Model controls")
-    half_life_days = st.sidebar.slider(
-        "Recency half-life (days)", min_value=30, max_value=365, value=90, step=10
-    )
-    home_advantage_goals = st.sidebar.slider(
-        "Home advantage (goals)", min_value=0.0, max_value=1.0, value=0.25, step=0.05
-    )
-    draw_tiebreaker = st.sidebar.slider(
-        "Draw advance strength", min_value=0.0, max_value=1.0, value=0.5, step=0.05,
-        help="How strongly a draw favors the higher Elo team in an advance scenario."
-    )
-    team_a_adjustment = st.sidebar.slider(
-        "Team A adjustment", min_value=-0.25, max_value=0.25, value=0.0, step=0.01,
-        help="Adjust expected goals up or down for Team A based on lineup or news."
-    )
-    team_b_adjustment = st.sidebar.slider(
-        "Team B adjustment", min_value=-0.25, max_value=0.25, value=0.0, step=0.01,
-        help="Adjust expected goals up or down for Team B based on lineup or news."
-    )
-    n_sims = st.sidebar.number_input(
-        "Monte Carlo simulations", min_value=1000, max_value=20000, value=5000, step=500
-    )
+    with st.sidebar.expander("Optional model tuning and market reference", expanded=False):
+        half_life_days = st.slider(
+            "Recency half-life (days)", min_value=30, max_value=365, value=90, step=10
+        )
+        home_advantage_goals = st.slider(
+            "Home advantage (goals)", min_value=0.0, max_value=1.0, value=0.25, step=0.05
+        )
+        draw_tiebreaker = st.slider(
+            "Draw advance strength", min_value=0.0, max_value=1.0, value=0.5, step=0.05,
+            help="How strongly a draw favors the higher Elo team in an advance scenario."
+        )
+        team_a_adjustment = st.slider(
+            "Team A adjustment", min_value=-0.25, max_value=0.25, value=0.0, step=0.01,
+            help="Adjust expected goals up or down for Team A based on lineup or news."
+        )
+        team_b_adjustment = st.slider(
+            "Team B adjustment", min_value=-0.25, max_value=0.25, value=0.0, step=0.01,
+            help="Adjust expected goals up or down for Team B based on lineup or news."
+        )
+        kalshi_price_cents = st.slider(
+            "Kalshi YES price (cents)", min_value=0.0, max_value=100.0, value=50.0, step=0.5,
+            help="Optional reference price for edge calculations. Leave at 50 if you just want probabilities."
+        )
+        n_sims = st.number_input(
+            "Monte Carlo simulations", min_value=1000, max_value=20000, value=5000, step=500
+        )
+    st.sidebar.write("Select a match and market on the main screen. Advanced options are available if needed.")
 
     uploaded_file = st.file_uploader("Upload historical_matches.csv", type=["csv"])
     app_dir = Path(__file__).resolve().parent
@@ -246,9 +286,6 @@ def main():
         return
 
     neutral = st.radio("Neutral site?", ["Yes", "No"]) == "Yes"
-    kalshi_price_cents = st.slider(
-        "Kalshi YES price (cents)", min_value=0.0, max_value=100.0, value=50.0, step=0.5
-    )
     market = st.selectbox("Select market", MARKET_OPTIONS)
 
     model = model_engine.build_team_model(
@@ -328,6 +365,10 @@ def main():
     )
     st.markdown("**Market insight:**")
     st.write(insight)
+
+    st.subheader("All market fair odds")
+    market_table = build_market_summary(simulation, kalshi_prob)
+    st.dataframe(market_table)
 
     st.subheader("Match forecast summary")
     st.write(
