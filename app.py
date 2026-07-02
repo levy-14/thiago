@@ -1,11 +1,18 @@
 from pathlib import Path
 from io import StringIO
 from collections import Counter
+import json
+import os
 
 import math
 import numpy as np
 import streamlit as st
 import pandas as pd
+
+try:
+    import requests
+except ImportError:
+    requests = None
 
 COMPETITION_WEIGHTS = {
     "friendly": 0.6,
@@ -39,6 +46,135 @@ OPTIONAL_NUMERIC_COLUMNS = [
 def competition_weight(competition):
     key = str(competition).strip().lower()
     return float(COMPETITION_WEIGHTS.get(key, 0.8))
+
+
+WORLD_CUP_SCHEDULE_PRODUCT = Path(__file__).resolve().parent / "data" / "world_cup_schedule.json"
+
+
+def _safe_extract(item, keys):
+    for key in keys:
+        if key in item and item[key] is not None:
+            return item[key]
+    return None
+
+
+def fetch_json(url, headers=None, params=None, timeout=10):
+    if requests is None:
+        return None
+    try:
+        response = requests.get(url, headers=headers or {}, params=params or {}, timeout=timeout)
+        response.raise_for_status()
+        return response.json()
+    except Exception:
+        return None
+
+
+def parse_world_cup_schedule(payload):
+    if payload is None:
+        return pd.DataFrame(columns=["date", "home_team", "away_team", "neutral", "competition", "status"])
+    if isinstance(payload, pd.DataFrame):
+        df = payload.copy()
+        if {"date", "home_team", "away_team"}.issubset(df.columns):
+            return df
+        payload = df.to_dict(orient="records")
+
+    if isinstance(payload, dict):
+        if "matches" in payload:
+            payload = payload["matches"]
+        elif "fixtures" in payload:
+            payload = payload["fixtures"]
+        elif "data" in payload and isinstance(payload["data"], list):
+            payload = payload["data"]
+        else:
+            payload = [payload]
+
+    rows = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        date_value = _safe_extract(item, ["utcDate", "date", "match_date", "kickoff"])
+        home_team = _safe_extract(item, ["home_team", "homeTeam", "home", "home_name", "team1"])
+        away_team = _safe_extract(item, ["away_team", "awayTeam", "away", "away_name", "team2"])
+        competition = _safe_extract(item, ["competition", "tournament", "event", "league"]) or "World Cup"
+        neutral_value = _safe_extract(item, ["neutral", "is_neutral", "neutral_venue"]) or False
+        status = _safe_extract(item, ["status", "stage", "match_status"]) or "scheduled"
+
+        if isinstance(date_value, str):
+            try:
+                date_value = pd.to_datetime(date_value, errors="coerce")
+            except Exception:
+                date_value = None
+
+        if date_value is None or home_team is None or away_team is None:
+            continue
+
+        neutral = str(neutral_value).strip().lower() in ["yes", "true", "1", "y", "t"]
+        rows.append({
+            "date": date_value,
+            "home_team": str(home_team).strip(),
+            "away_team": str(away_team).strip(),
+            "neutral": neutral,
+            "competition": str(competition).strip(),
+            "status": str(status).strip(),
+        })
+
+    if not rows:
+        return pd.DataFrame(columns=["date", "home_team", "away_team", "neutral", "competition", "status"])
+
+    return pd.DataFrame(rows)
+
+
+def load_world_cup_schedule(api_url=None, local_path=None):
+    if api_url:
+        payload = fetch_json(api_url)
+        schedule = parse_world_cup_schedule(payload)
+        if not schedule.empty:
+            return schedule
+
+    local_path = local_path or WORLD_CUP_SCHEDULE_PRODUCT
+    if local_path.exists():
+        try:
+            if local_path.suffix.lower() == ".csv":
+                return pd.read_csv(local_path)
+            return parse_world_cup_schedule(json.loads(local_path.read_text()))
+        except Exception:
+            pass
+
+    return pd.DataFrame(columns=["date", "home_team", "away_team", "neutral", "competition", "status"])
+
+
+def load_live_kalshi_price(api_url, market, team_a, team_b, api_key=None):
+    if not api_url or requests is None:
+        return None
+
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    params = {
+        "market": market,
+        "home_team": team_a,
+        "away_team": team_b,
+    }
+    payload = fetch_json(api_url, headers=headers, params=params)
+    if payload is None:
+        return None
+
+    if isinstance(payload, dict):
+        for weight_key in ["probability", "price", "implied_probability", "implied_prob"]:
+            if weight_key in payload:
+                try:
+                    value = float(payload[weight_key])
+                    if 0.0 <= value <= 1.0:
+                        return value
+                    if 1.0 < value <= 100.0:
+                        return value / 100.0
+                except Exception:
+                    pass
+        if "data" in payload and isinstance(payload["data"], dict):
+            return load_live_kalshi_price(payload["data"], market, team_a, team_b, api_key)
+
+    return None
 
 
 def load_matches(df):
@@ -85,13 +221,17 @@ def _recency_weight(date, last_date, half_life_days):
     return 0.5 ** (days / half_life_days)
 
 
-def build_team_model(matches, half_life_days=90, home_advantage_goals=0.25):
+def build_team_model(matches, half_life_days=90, home_advantage_goals=0.25, max_history_days=365):
     matches = load_matches(matches)
     if half_life_days <= 0:
         raise ValueError("half_life_days must be positive")
 
+    cutoff_date = pd.Timestamp.now().normalize() - pd.Timedelta(days=max_history_days)
+    recent_matches = matches[matches["date"] >= cutoff_date]
+    if recent_matches.empty:
+        recent_matches = matches.copy()
+    matches = recent_matches.sort_values("date").reset_index(drop=True)
     last_date = matches["date"].max()
-    matches = matches.sort_values("date").reset_index(drop=True)
     matches["competition_weight"] = matches["competition"].astype(str).str.lower().apply(competition_weight)
     matches["weight"] = matches.apply(
         lambda row: _recency_weight(row["date"], last_date, half_life_days) * row["competition_weight"],
@@ -784,7 +924,7 @@ def main():
     draw_tiebreaker = 0.5
     team_a_adjustment = 0.0
     team_b_adjustment = 0.0
-    kalshi_price_cents = 50.0
+    kalshi_prob = 0.5
     n_sims = 5000
 
     st.sidebar.write("Select a match and a market on the main screen. Model tuning is fixed for all games.")
@@ -846,23 +986,81 @@ def main():
         st.warning("No matches available in the uploaded dataset.")
         return
 
-    matches_df = matches_df.sort_values(["date", "home_team", "away_team"]).reset_index(drop=True)
-    game_choices = [
-        f"{row['date'].date()} — {row['home_team']} vs {row['away_team']} ({row['competition']})"
-        for _, row in matches_df.iterrows()
-    ]
-
-    st.write(f"Loaded {len(matches_df)} historical matches.")
-    st.info(
-        "The model uses the full dataset to train, but the interface focuses on the selected match and recent team form. "
-        "Full historical data is hidden behind the preview section."
+    schedule_api_url = os.getenv("WORLD_CUP_API_URL", "")
+    kalshi_api_url = os.getenv("KALSHI_API_URL", "")
+    use_live_schedule = st.sidebar.checkbox("Use live World Cup schedule API", value=False)
+    schedule_upload = st.sidebar.file_uploader("Upload World Cup schedule CSV/JSON", type=["csv", "json"])
+    manual_kalshi_price = st.sidebar.number_input(
+        "Manual Kalshi implied probability",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.5,
+        step=0.01,
+        help="Enter the current Kalshi implied probability for the selected market."
     )
-    with st.expander("Preview full historical dataset"):
-        st.dataframe(matches_df.head(10))
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### Live API settings")
+    schedule_api_url = st.sidebar.text_input(
+        "Schedule API URL",
+        value=schedule_api_url,
+        help="Optional API providing upcoming World Cup matches in JSON format."
+    )
+    kalshi_api_url = st.sidebar.text_input(
+        "Kalshi market API URL",
+        value=kalshi_api_url,
+        help="Optional Kalshi API endpoint for live market prices."
+    )
+    kalshi_api_key = st.sidebar.text_input(
+        "Kalshi API token",
+        value=os.getenv("KALSHI_API_KEY", ""),
+        type="password",
+        help="Optional API token to fetch Kalshi market prices automatically."
+    )
 
-    selected_game = st.selectbox("Select a match", game_choices, index=0)
-    selected_idx = game_choices.index(selected_game)
-    match_row = matches_df.loc[selected_idx]
+    schedule_df = None
+    schedule_source = "local fallback"
+    if schedule_upload is not None:
+        try:
+            if schedule_upload.name.lower().endswith(".csv"):
+                schedule_df = pd.read_csv(schedule_upload)
+            else:
+                schedule_df = pd.read_json(schedule_upload)
+            schedule_source = "uploaded schedule"
+        except Exception as exc:
+            st.sidebar.error(f"Unable to load schedule upload: {exc}")
+            schedule_df = pd.DataFrame()
+
+    if schedule_df is None or schedule_df.empty:
+        if use_live_schedule and schedule_api_url:
+            schedule_df = load_world_cup_schedule(api_url=schedule_api_url)
+            schedule_source = "live API" if not schedule_df.empty else "local fallback"
+        else:
+            schedule_df = load_world_cup_schedule(api_url=None)
+            schedule_source = "local fallback"
+
+    schedule_df = parse_world_cup_schedule(schedule_df)
+    schedule_df["date"] = pd.to_datetime(schedule_df["date"], errors="coerce")
+    schedule_df = schedule_df.dropna(subset=["date", "home_team", "away_team"]).sort_values("date")
+    upcoming_df = schedule_df[schedule_df["date"] >= pd.Timestamp.now().normalize()]
+    if upcoming_df.empty:
+        st.warning("No upcoming World Cup matches found in the loaded schedule. Please upload fresh schedule data or provide a live schedule API.")
+        upcoming_df = schedule_df
+
+    st.sidebar.markdown(f"**Schedule source:** {schedule_source}")
+    if schedule_source == "live API" and schedule_df.empty:
+        st.sidebar.error("Live API schedule lookup failed. Check the URL or use a schedule upload.")
+
+    match_choices = [
+        f"{row['date'].date()} — {row['home_team']} vs {row['away_team']} ({row['competition']})"
+        for _, row in upcoming_df.iterrows()
+    ]
+    if not match_choices:
+        st.error("No World Cup match options are available. Upload a schedule file or provide a live schedule API.")
+        return
+
+    selected_game = st.sidebar.selectbox("Select upcoming World Cup match", match_choices, index=0)
+    selected_idx = upcoming_df.index[0] if selected_game is None else match_choices.index(selected_game)
+    match_row = upcoming_df.iloc[selected_idx]
     team_a = match_row["home_team"]
     team_b = match_row["away_team"]
     neutral = bool(match_row["neutral"])
@@ -871,23 +1069,33 @@ def main():
         f"{match_row['competition']} | {'Neutral' if neutral else 'Home advantage'}"
     )
 
-    relevant_recent = matches_df[
-        (matches_df["home_team"].isin([team_a, team_b]))
-        | (matches_df["away_team"].isin([team_a, team_b]))
-    ].sort_values("date", ascending=False).reset_index(drop=True)
-    if not relevant_recent.empty:
-        with st.expander("Show recent matches for the selected teams"):
-            st.write(
-                "These are the most recent games for the selected home and away teams. "
-                "Older match history is hidden by default to keep the analysis focused."
-            )
-            st.dataframe(relevant_recent.head(10))
+    market = st.sidebar.selectbox("Select market", MARKET_OPTIONS)
 
-    market = st.selectbox("Select market", MARKET_OPTIONS)
+    if kalshi_api_url and requests is not None:
+        st.sidebar.write("Live market fetch is enabled, but you still need a compatible Kalshi API endpoint.")
+    elif kalshi_api_url and requests is None:
+        st.sidebar.warning("Install requests to enable live API fetching from Kalshi.")
+
+    if schedule_api_url and use_live_schedule and requests is None:
+        st.sidebar.warning("Install requests to enable live schedule fetching.")
 
     model = build_team_model(
-        matches_df, half_life_days=half_life_days, home_advantage_goals=home_advantage_goals
+        matches_df,
+        half_life_days=half_life_days,
+        home_advantage_goals=home_advantage_goals,
+        max_history_days=365,
     )
+
+    live_kalshi_prob = None
+    if kalshi_api_url and requests is not None:
+        live_kalshi_prob = load_live_kalshi_price(kalshi_api_url, market, team_a, team_b, api_key=kalshi_api_key)
+
+    kalshi_prob = live_kalshi_prob if live_kalshi_prob is not None else manual_kalshi_price
+    if live_kalshi_prob is not None:
+        st.sidebar.success(f"Live Kalshi implied probability loaded: {live_kalshi_prob:.2%}")
+    else:
+        st.sidebar.info("Using manual Kalshi probability or default value.")
+
     simulation = simulate_match(
         model,
         team_a,
@@ -945,7 +1153,7 @@ def main():
         fair_prob = 0.0
 
     fair_decimal_value = fair_decimal(fair_prob)
-    edge = compare_to_kalshi(fair_prob, kalshi_price_cents / 100.0)
+    edge = compare_to_kalshi(fair_prob, kalshi_prob)
     edge_pct = edge * 100.0
     verdict = verdict_from_edge(edge_pct)
     insight = market_insight(market, simulation, team_a, team_b, neutral)
@@ -953,7 +1161,7 @@ def main():
     st.header("Thiago value output")
     st.metric("Thiago fair probability", format_percentage(fair_prob))
     st.metric("Fair decimal odds", fair_decimal_value)
-    st.metric("Kalshi probability", format_percentage(kalshi_price_cents / 100.0))
+    st.metric("Kalshi probability", format_percentage(kalshi_prob))
     st.metric("Edge (percentage points)", f"{edge_pct:+.2f}")
     st.write(f"**Verdict:** {verdict}")
     st.info(
@@ -963,7 +1171,7 @@ def main():
     st.write(insight)
 
     st.subheader("All market fair odds")
-    market_table = build_market_summary(simulation, kalshi_price_cents / 100.0)
+    market_table = build_market_summary(simulation, kalshi_prob)
     st.dataframe(market_table)
 
     st.subheader("Match forecast summary")
