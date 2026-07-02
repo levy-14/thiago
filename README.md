@@ -29,6 +29,17 @@ The historical matches CSV must include these columns:
 - `neutral` (`yes` / `no` / `true` / `false`)
 - `competition`
 
+Optional advanced event and team metrics are strongly encouraged. If present, the app will use them to improve strength estimates:
+
+- `home_shots`, `away_shots`
+- `home_shots_on_target`, `away_shots_on_target`
+- `home_corners`, `away_corners`
+- `home_fouls`, `away_fouls`
+- `home_possession`, `away_possession`
+- `home_pass_accuracy`, `away_pass_accuracy`
+- `home_xg`, `away_xg`
+- `home_goal_scorers`, `away_goal_scorers`
+
 If no CSV is uploaded, the app uses `data/demo_historical_matches.csv`.
 
 All match choices are selected from dropdowns, and all market inputs are chosen with sliders or menu selection. There is no need to type team names manually.
