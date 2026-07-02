@@ -8,7 +8,18 @@ ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-import model_engine
+try:
+    import model_engine
+except ModuleNotFoundError:
+    import importlib.util
+
+    module_path = ROOT_DIR / "model_engine.py"
+    if not module_path.exists():
+        raise
+
+    spec = importlib.util.spec_from_file_location("model_engine", module_path)
+    model_engine = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(model_engine)
 
 
 MARKET_OPTIONS = [
