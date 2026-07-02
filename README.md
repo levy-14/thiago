@@ -17,6 +17,12 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+## Live schedule and Kalshi integration
+
+The app supports an optional World Cup schedule API or a schedule upload file. If you enable `Use live World Cup schedule API`, enter a compatible schedule API URL in the sidebar.
+
+You can also provide an optional Kalshi market API URL and API token to fetch live market implied probabilities. If live pricing is unavailable, use the manual Kalshi implied probability input instead.
+
 ## CSV data format
 
 The historical matches CSV must include these columns:
