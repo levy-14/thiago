@@ -178,6 +178,9 @@ def build_team_model(matches, half_life_days=90, home_advantage_goals=0.25):
             team_pass_acc_home[home] += row["home_pass_accuracy"] * weight
             team_pass_acc_away[away] += row["away_pass_accuracy"] * weight
 
+    recent_period = pd.Timedelta(days=90)
+    recent_matches = matches[matches["date"] >= last_date - recent_period]
+
     def _recent_factors(team, home=True):
         subset = recent_matches[recent_matches["home_team"] == team] if home else recent_matches[recent_matches["away_team"] == team]
         if subset.empty:
@@ -850,7 +853,11 @@ def main():
     ]
 
     st.write(f"Loaded {len(matches_df)} historical matches.")
-    with st.expander("Preview historical data"):
+    st.info(
+        "The model uses the full dataset to train, but the interface focuses on the selected match and recent team form. "
+        "Full historical data is hidden behind the preview section."
+    )
+    with st.expander("Preview full historical dataset"):
         st.dataframe(matches_df.head(10))
 
     selected_game = st.selectbox("Select a match", game_choices, index=0)
@@ -863,6 +870,19 @@ def main():
         f"**Selected match:** {match_row['date'].date()} — {team_a} vs {team_b} | "
         f"{match_row['competition']} | {'Neutral' if neutral else 'Home advantage'}"
     )
+
+    relevant_recent = matches_df[
+        (matches_df["home_team"].isin([team_a, team_b]))
+        | (matches_df["away_team"].isin([team_a, team_b]))
+    ].sort_values("date", ascending=False).reset_index(drop=True)
+    if not relevant_recent.empty:
+        with st.expander("Show recent matches for the selected teams"):
+            st.write(
+                "These are the most recent games for the selected home and away teams. "
+                "Older match history is hidden by default to keep the analysis focused."
+            )
+            st.dataframe(relevant_recent.head(10))
+
     market = st.selectbox("Select market", MARKET_OPTIONS)
 
     model = build_team_model(
