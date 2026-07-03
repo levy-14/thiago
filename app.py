@@ -50,6 +50,33 @@ def competition_weight(competition):
 
 WORLD_CUP_SCHEDULE_PRODUCT = Path(__file__).resolve().parent / "data" / "world_cup_schedule.json"
 
+DEFAULT_WORLD_CUP_SCHEDULE = [
+    {
+        "date": "2026-11-15",
+        "home_team": "USA",
+        "away_team": "England",
+        "neutral": True,
+        "competition": "World Cup Group Stage",
+        "status": "scheduled",
+    },
+    {
+        "date": "2026-11-18",
+        "home_team": "Canada",
+        "away_team": "France",
+        "neutral": True,
+        "competition": "World Cup Group Stage",
+        "status": "scheduled",
+    },
+    {
+        "date": "2026-11-21",
+        "home_team": "Mexico",
+        "away_team": "Argentina",
+        "neutral": True,
+        "competition": "World Cup Group Stage",
+        "status": "scheduled",
+    },
+]
+
 
 def _safe_extract(item, keys):
     for key in keys:
@@ -140,7 +167,7 @@ def load_world_cup_schedule(api_url=None, local_path=None):
         except Exception:
             pass
 
-    return pd.DataFrame(columns=["date", "home_team", "away_team", "neutral", "competition", "status"])
+    return parse_world_cup_schedule(DEFAULT_WORLD_CUP_SCHEDULE)
 
 
 def load_live_kalshi_price(api_url, market, team_a, team_b, api_key=None):
@@ -986,10 +1013,6 @@ def main():
         st.warning("No matches available in the uploaded dataset.")
         return
 
-    schedule_api_url = os.getenv("WORLD_CUP_API_URL", "")
-    kalshi_api_url = os.getenv("KALSHI_API_URL", "")
-    use_live_schedule = st.sidebar.checkbox("Use live World Cup schedule API", value=False)
-    schedule_upload = st.sidebar.file_uploader("Upload World Cup schedule CSV/JSON", type=["csv", "json"])
     manual_kalshi_price = st.sidebar.number_input(
         "Manual Kalshi implied probability",
         min_value=0.0,
@@ -998,45 +1021,9 @@ def main():
         step=0.01,
         help="Enter the current Kalshi implied probability for the selected market."
     )
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### Live API settings")
-    schedule_api_url = st.sidebar.text_input(
-        "Schedule API URL",
-        value=schedule_api_url,
-        help="Optional API providing upcoming World Cup matches in JSON format."
-    )
-    kalshi_api_url = st.sidebar.text_input(
-        "Kalshi market API URL",
-        value=kalshi_api_url,
-        help="Optional Kalshi API endpoint for live market prices."
-    )
-    kalshi_api_key = st.sidebar.text_input(
-        "Kalshi API token",
-        value=os.getenv("KALSHI_API_KEY", ""),
-        type="password",
-        help="Optional API token to fetch Kalshi market prices automatically."
-    )
 
-    schedule_df = None
-    schedule_source = "local fallback"
-    if schedule_upload is not None:
-        try:
-            if schedule_upload.name.lower().endswith(".csv"):
-                schedule_df = pd.read_csv(schedule_upload)
-            else:
-                schedule_df = pd.read_json(schedule_upload)
-            schedule_source = "uploaded schedule"
-        except Exception as exc:
-            st.sidebar.error(f"Unable to load schedule upload: {exc}")
-            schedule_df = pd.DataFrame()
-
-    if schedule_df is None or schedule_df.empty:
-        if use_live_schedule and schedule_api_url:
-            schedule_df = load_world_cup_schedule(api_url=schedule_api_url)
-            schedule_source = "live API" if not schedule_df.empty else "local fallback"
-        else:
-            schedule_df = load_world_cup_schedule(api_url=None)
-            schedule_source = "local fallback"
+    schedule_df = load_world_cup_schedule(api_url=None)
+    schedule_source = "default built-in schedule"
 
     schedule_df = parse_world_cup_schedule(schedule_df)
     schedule_df["date"] = pd.to_datetime(schedule_df["date"], errors="coerce")
@@ -1047,8 +1034,6 @@ def main():
         upcoming_df = schedule_df
 
     st.sidebar.markdown(f"**Schedule source:** {schedule_source}")
-    if schedule_source == "live API" and schedule_df.empty:
-        st.sidebar.error("Live API schedule lookup failed. Check the URL or use a schedule upload.")
 
     match_choices = [
         f"{row['date'].date()} — {row['home_team']} vs {row['away_team']} ({row['competition']})"
@@ -1071,14 +1056,6 @@ def main():
 
     market = st.sidebar.selectbox("Select market", MARKET_OPTIONS)
 
-    if kalshi_api_url and requests is not None:
-        st.sidebar.write("Live market fetch is enabled, but you still need a compatible Kalshi API endpoint.")
-    elif kalshi_api_url and requests is None:
-        st.sidebar.warning("Install requests to enable live API fetching from Kalshi.")
-
-    if schedule_api_url and use_live_schedule and requests is None:
-        st.sidebar.warning("Install requests to enable live schedule fetching.")
-
     model = build_team_model(
         matches_df,
         half_life_days=half_life_days,
@@ -1086,15 +1063,8 @@ def main():
         max_history_days=365,
     )
 
-    live_kalshi_prob = None
-    if kalshi_api_url and requests is not None:
-        live_kalshi_prob = load_live_kalshi_price(kalshi_api_url, market, team_a, team_b, api_key=kalshi_api_key)
-
-    kalshi_prob = live_kalshi_prob if live_kalshi_prob is not None else manual_kalshi_price
-    if live_kalshi_prob is not None:
-        st.sidebar.success(f"Live Kalshi implied probability loaded: {live_kalshi_prob:.2%}")
-    else:
-        st.sidebar.info("Using manual Kalshi probability or default value.")
+    kalshi_prob = manual_kalshi_price
+    st.sidebar.info("Using manual Kalshi implied probability for the selected market.")
 
     simulation = simulate_match(
         model,
