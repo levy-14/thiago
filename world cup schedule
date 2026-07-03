@@ -1,0 +1,258 @@
+[
+    {
+        "date":  "2026-07-04",
+        "home_team":  "Winner Group A",
+        "away_team":  "Runner-up Group B",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-04",
+        "home_team":  "Winner Group C",
+        "away_team":  "Runner-up Group D",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-04",
+        "home_team":  "Winner Group E",
+        "away_team":  "Runner-up Group F",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-04",
+        "home_team":  "Winner Group G",
+        "away_team":  "Runner-up Group H",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-05",
+        "home_team":  "Winner Group I",
+        "away_team":  "Runner-up Group J",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-05",
+        "home_team":  "Winner Group K",
+        "away_team":  "Runner-up Group L",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-05",
+        "home_team":  "Winner Group M",
+        "away_team":  "Runner-up Group N",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-05",
+        "home_team":  "Winner Group O",
+        "away_team":  "Runner-up Group P",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-06",
+        "home_team":  "Winner Group B",
+        "away_team":  "Runner-up Group A",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-06",
+        "home_team":  "Winner Group D",
+        "away_team":  "Runner-up Group C",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-06",
+        "home_team":  "Winner Group F",
+        "away_team":  "Runner-up Group E",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-06",
+        "home_team":  "Winner Group H",
+        "away_team":  "Runner-up Group G",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-07",
+        "home_team":  "Winner Group J",
+        "away_team":  "Runner-up Group I",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-07",
+        "home_team":  "Winner Group L",
+        "away_team":  "Runner-up Group K",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-07",
+        "home_team":  "Winner Group N",
+        "away_team":  "Runner-up Group M",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-07",
+        "home_team":  "Winner Group P",
+        "away_team":  "Runner-up Group O",
+        "neutral":  true,
+        "competition":  "World Cup Round of 32",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-09",
+        "home_team":  "Winner Round of 32 Match 1",
+        "away_team":  "Winner Round of 32 Match 2",
+        "neutral":  true,
+        "competition":  "World Cup Round of 16",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-09",
+        "home_team":  "Winner Round of 32 Match 3",
+        "away_team":  "Winner Round of 32 Match 4",
+        "neutral":  true,
+        "competition":  "World Cup Round of 16",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-09",
+        "home_team":  "Winner Round of 32 Match 5",
+        "away_team":  "Winner Round of 32 Match 6",
+        "neutral":  true,
+        "competition":  "World Cup Round of 16",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-09",
+        "home_team":  "Winner Round of 32 Match 7",
+        "away_team":  "Winner Round of 32 Match 8",
+        "neutral":  true,
+        "competition":  "World Cup Round of 16",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-10",
+        "home_team":  "Winner Round of 32 Match 9",
+        "away_team":  "Winner Round of 32 Match 10",
+        "neutral":  true,
+        "competition":  "World Cup Round of 16",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-10",
+        "home_team":  "Winner Round of 32 Match 11",
+        "away_team":  "Winner Round of 32 Match 12",
+        "neutral":  true,
+        "competition":  "World Cup Round of 16",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-10",
+        "home_team":  "Winner Round of 32 Match 13",
+        "away_team":  "Winner Round of 32 Match 14",
+        "neutral":  true,
+        "competition":  "World Cup Round of 16",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-10",
+        "home_team":  "Winner Round of 32 Match 15",
+        "away_team":  "Winner Round of 32 Match 16",
+        "neutral":  true,
+        "competition":  "World Cup Round of 16",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-13",
+        "home_team":  "Winner Round of 16 Match 1",
+        "away_team":  "Winner Round of 16 Match 2",
+        "neutral":  true,
+        "competition":  "World Cup Quarterfinal",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-13",
+        "home_team":  "Winner Round of 16 Match 3",
+        "away_team":  "Winner Round of 16 Match 4",
+        "neutral":  true,
+        "competition":  "World Cup Quarterfinal",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-14",
+        "home_team":  "Winner Round of 16 Match 5",
+        "away_team":  "Winner Round of 16 Match 6",
+        "neutral":  true,
+        "competition":  "World Cup Quarterfinal",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-14",
+        "home_team":  "Winner Round of 16 Match 7",
+        "away_team":  "Winner Round of 16 Match 8",
+        "neutral":  true,
+        "competition":  "World Cup Quarterfinal",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-17",
+        "home_team":  "Winner Quarterfinal 1",
+        "away_team":  "Winner Quarterfinal 2",
+        "neutral":  true,
+        "competition":  "World Cup Semifinal",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-18",
+        "home_team":  "Winner Quarterfinal 3",
+        "away_team":  "Winner Quarterfinal 4",
+        "neutral":  true,
+        "competition":  "World Cup Semifinal",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-19",
+        "home_team":  "Loser Semifinal 1",
+        "away_team":  "Loser Semifinal 2",
+        "neutral":  true,
+        "competition":  "World Cup Third Place Play-off",
+        "status":  "scheduled"
+    },
+    {
+        "date":  "2026-07-20",
+        "home_team":  "Winner Semifinal 1",
+        "away_team":  "Winner Semifinal 2",
+        "neutral":  true,
+        "competition":  "World Cup Final",
+        "status":  "scheduled"
+    }
+]
