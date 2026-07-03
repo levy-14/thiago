@@ -50,39 +50,203 @@ def competition_weight(competition):
 
 WORLD_CUP_SCHEDULE_PRODUCT = Path(__file__).resolve().parent / "data" / "world_cup_schedule.json"
 
-DEFAULT_WORLD_CUP_SCHEDULE = [
-    {
-        "date": "2026-11-15",
-        "home_team": "USA",
-        "away_team": "England",
-        "neutral": True,
-        "competition": "World Cup Group Stage",
-        "status": "scheduled",
-    },
-    {
-        "date": "2026-11-18",
-        "home_team": "Canada",
-        "away_team": "France",
-        "neutral": True,
-        "competition": "World Cup Group Stage",
-        "status": "scheduled",
-    },
-    {
-        "date": "2026-11-21",
-        "home_team": "Mexico",
-        "away_team": "Argentina",
-        "neutral": True,
-        "competition": "World Cup Group Stage",
-        "status": "scheduled",
-    },
-]
-
 
 def _safe_extract(item, keys):
+    if not isinstance(item, dict):
+        return None
+
     for key in keys:
-        if key in item and item[key] is not None:
-            return item[key]
+        if key not in item or item[key] is None:
+            continue
+        value = item[key]
+        if isinstance(value, (str, int, float, bool)):
+            return value
+        if isinstance(value, dict):
+            nested = _safe_extract(value, ["Description", "ShortClubName", "Abbreviation", "TeamName", "Name", "Locale"])
+            if nested is not None:
+                return nested
+        if isinstance(value, list) and value:
+            for entry in value:
+                if isinstance(entry, (str, int, float, bool)):
+                    return entry
+                if isinstance(entry, dict):
+                    nested = _safe_extract(entry, ["Description", "ShortClubName", "Abbreviation", "TeamName", "Name"])
+                    if nested is not None:
+                        return nested
     return None
+
+
+def default_world_cup_schedule():
+    groups = list("ABCDEFGHIJKL")
+    group_date_triples = [
+        ("2026-06-11", "2026-06-18", "2026-06-25"),
+        ("2026-06-12", "2026-06-19", "2026-06-26"),
+        ("2026-06-13", "2026-06-20", "2026-06-27"),
+        ("2026-06-14", "2026-06-21", "2026-06-28"),
+        ("2026-06-15", "2026-06-22", "2026-06-29"),
+        ("2026-06-16", "2026-06-23", "2026-06-30"),
+    ]
+    schedule = []
+
+    for idx, group in enumerate(groups):
+        group_dates = group_date_triples[idx // 2]
+        schedule.extend([
+            {
+                "date": group_dates[0],
+                "home_team": f"Group {group} Team 1",
+                "away_team": f"Group {group} Team 2",
+                "neutral": True,
+                "competition": f"World Cup Group {group}",
+                "status": "scheduled",
+            },
+            {
+                "date": group_dates[0],
+                "home_team": f"Group {group} Team 3",
+                "away_team": f"Group {group} Team 4",
+                "neutral": True,
+                "competition": f"World Cup Group {group}",
+                "status": "scheduled",
+            },
+            {
+                "date": group_dates[1],
+                "home_team": f"Group {group} Team 1",
+                "away_team": f"Group {group} Team 3",
+                "neutral": True,
+                "competition": f"World Cup Group {group}",
+                "status": "scheduled",
+            },
+            {
+                "date": group_dates[1],
+                "home_team": f"Group {group} Team 2",
+                "away_team": f"Group {group} Team 4",
+                "neutral": True,
+                "competition": f"World Cup Group {group}",
+                "status": "scheduled",
+            },
+            {
+                "date": group_dates[2],
+                "home_team": f"Group {group} Team 1",
+                "away_team": f"Group {group} Team 4",
+                "neutral": True,
+                "competition": f"World Cup Group {group}",
+                "status": "scheduled",
+            },
+            {
+                "date": group_dates[2],
+                "home_team": f"Group {group} Team 2",
+                "away_team": f"Group {group} Team 3",
+                "neutral": True,
+                "competition": f"World Cup Group {group}",
+                "status": "scheduled",
+            },
+        ])
+
+    r32_pairs = [
+        ("Winner Group A", "Runner-up Group B"),
+        ("Winner Group C", "Runner-up Group D"),
+        ("Winner Group E", "Runner-up Group F"),
+        ("Winner Group G", "Runner-up Group H"),
+        ("Winner Group I", "Runner-up Group J"),
+        ("Winner Group K", "Runner-up Group L"),
+        ("Winner Group B", "Runner-up Group A"),
+        ("Winner Group D", "Runner-up Group C"),
+        ("Winner Group F", "Runner-up Group E"),
+        ("Winner Group H", "Runner-up Group G"),
+        ("Winner Group J", "Runner-up Group I"),
+        ("Winner Group L", "Runner-up Group K"),
+        ("Best Third Place 1", "Best Third Place 2"),
+        ("Best Third Place 3", "Best Third Place 4"),
+        ("Best Third Place 5", "Best Third Place 6"),
+        ("Best Third Place 7", "Best Third Place 8"),
+    ]
+    r32_dates = ["2026-07-04", "2026-07-04", "2026-07-04", "2026-07-04",
+                 "2026-07-05", "2026-07-05", "2026-07-05", "2026-07-05",
+                 "2026-07-06", "2026-07-06", "2026-07-06", "2026-07-06",
+                 "2026-07-07", "2026-07-07", "2026-07-07", "2026-07-07"]
+    for date, (home, away) in zip(r32_dates, r32_pairs):
+        schedule.append({
+            "date": date,
+            "home_team": home,
+            "away_team": away,
+            "neutral": True,
+            "competition": "World Cup Round of 32",
+            "status": "scheduled",
+        })
+
+    r16_pairs = [
+        ("Winner Round of 32 Match 1", "Winner Round of 32 Match 2"),
+        ("Winner Round of 32 Match 3", "Winner Round of 32 Match 4"),
+        ("Winner Round of 32 Match 5", "Winner Round of 32 Match 6"),
+        ("Winner Round of 32 Match 7", "Winner Round of 32 Match 8"),
+        ("Winner Round of 32 Match 9", "Winner Round of 32 Match 10"),
+        ("Winner Round of 32 Match 11", "Winner Round of 32 Match 12"),
+        ("Winner Round of 32 Match 13", "Winner Round of 32 Match 14"),
+        ("Winner Round of 32 Match 15", "Winner Round of 32 Match 16"),
+    ]
+    r16_dates = ["2026-07-09", "2026-07-09", "2026-07-09", "2026-07-09",
+                 "2026-07-10", "2026-07-10", "2026-07-10", "2026-07-10"]
+    for date, (home, away) in zip(r16_dates, r16_pairs):
+        schedule.append({
+            "date": date,
+            "home_team": home,
+            "away_team": away,
+            "neutral": True,
+            "competition": "World Cup Round of 16",
+            "status": "scheduled",
+        })
+
+    qf_pairs = [
+        ("Winner Round of 16 Match 1", "Winner Round of 16 Match 2"),
+        ("Winner Round of 16 Match 3", "Winner Round of 16 Match 4"),
+        ("Winner Round of 16 Match 5", "Winner Round of 16 Match 6"),
+        ("Winner Round of 16 Match 7", "Winner Round of 16 Match 8"),
+    ]
+    qf_dates = ["2026-07-13", "2026-07-13", "2026-07-14", "2026-07-14"]
+    for date, (home, away) in zip(qf_dates, qf_pairs):
+        schedule.append({
+            "date": date,
+            "home_team": home,
+            "away_team": away,
+            "neutral": True,
+            "competition": "World Cup Quarterfinal",
+            "status": "scheduled",
+        })
+
+    sf_pairs = [
+        ("Winner Quarterfinal 1", "Winner Quarterfinal 2"),
+        ("Winner Quarterfinal 3", "Winner Quarterfinal 4"),
+    ]
+    sf_dates = ["2026-07-17", "2026-07-18"]
+    for date, (home, away) in zip(sf_dates, sf_pairs):
+        schedule.append({
+            "date": date,
+            "home_team": home,
+            "away_team": away,
+            "neutral": True,
+            "competition": "World Cup Semifinal",
+            "status": "scheduled",
+        })
+
+    schedule.append({
+        "date": "2026-07-19",
+        "home_team": "Loser Semifinal 1",
+        "away_team": "Loser Semifinal 2",
+        "neutral": True,
+        "competition": "World Cup Third Place Play-off",
+        "status": "scheduled",
+    })
+    schedule.append({
+        "date": "2026-07-20",
+        "home_team": "Winner Semifinal 1",
+        "away_team": "Winner Semifinal 2",
+        "neutral": True,
+        "competition": "World Cup Final",
+        "status": "scheduled",
+    })
+
+    return schedule
+
+DEFAULT_WORLD_CUP_SCHEDULE = default_world_cup_schedule()
 
 
 def fetch_json(url, headers=None, params=None, timeout=10):
@@ -112,6 +276,8 @@ def parse_world_cup_schedule(payload):
             payload = payload["fixtures"]
         elif "data" in payload and isinstance(payload["data"], list):
             payload = payload["data"]
+        elif "Results" in payload and isinstance(payload["Results"], list):
+            payload = payload["Results"]
         else:
             payload = [payload]
 
@@ -119,12 +285,12 @@ def parse_world_cup_schedule(payload):
     for item in payload:
         if not isinstance(item, dict):
             continue
-        date_value = _safe_extract(item, ["utcDate", "date", "match_date", "kickoff"])
-        home_team = _safe_extract(item, ["home_team", "homeTeam", "home", "home_name", "team1"])
-        away_team = _safe_extract(item, ["away_team", "awayTeam", "away", "away_name", "team2"])
-        competition = _safe_extract(item, ["competition", "tournament", "event", "league"]) or "World Cup"
-        neutral_value = _safe_extract(item, ["neutral", "is_neutral", "neutral_venue"]) or False
-        status = _safe_extract(item, ["status", "stage", "match_status"]) or "scheduled"
+        date_value = _safe_extract(item, ["utcDate", "date", "match_date", "kickoff", "Date", "LocalDate"])
+        home_team = _safe_extract(item, ["home_team", "homeTeam", "home", "home_name", "team1", "Home"])
+        away_team = _safe_extract(item, ["away_team", "awayTeam", "away", "away_name", "team2", "Away"])
+        competition = _safe_extract(item, ["competition", "tournament", "event", "league", "CompetitionName", "SeasonName", "StageName"]) or "World Cup"
+        neutral_value = _safe_extract(item, ["neutral", "is_neutral", "neutral_venue", "NeutralVenue"])
+        status = _safe_extract(item, ["status", "stage", "match_status", "MatchStatus"]) or "scheduled"
 
         if isinstance(date_value, str):
             try:
@@ -167,7 +333,7 @@ def load_world_cup_schedule(api_url=None, local_path=None):
         except Exception:
             pass
 
-    return parse_world_cup_schedule(DEFAULT_WORLD_CUP_SCHEDULE)
+    return parse_world_cup_schedule(default_world_cup_schedule())
 
 
 def load_live_kalshi_price(api_url, market, team_a, team_b, api_key=None):
@@ -655,19 +821,21 @@ def simulate_match(
         "watch_markets": [],
     }
 
+    home_win_label = f"{team_a} regulation win"
+    away_win_label = f"{team_b} regulation win"
     if prob_win_a >= 0.55:
-        basket["aligned_markets"].append("Team A regulation win")
+        basket["aligned_markets"].append(home_win_label)
     elif prob_win_a >= 0.45:
-        basket["moderate_markets"].append("Team A regulation win")
+        basket["moderate_markets"].append(home_win_label)
     else:
-        basket["watch_markets"].append("Team A regulation win")
+        basket["watch_markets"].append(home_win_label)
 
     if prob_win_b >= 0.55:
-        basket["aligned_markets"].append("Team B regulation win")
+        basket["aligned_markets"].append(away_win_label)
     elif prob_win_b >= 0.45:
-        basket["moderate_markets"].append("Team B regulation win")
+        basket["moderate_markets"].append(away_win_label)
     else:
-        basket["watch_markets"].append("Team B regulation win")
+        basket["watch_markets"].append(away_win_label)
 
     if prob_draw >= 0.30:
         basket["aligned_markets"].append("Draw")
@@ -676,12 +844,13 @@ def simulate_match(
     else:
         basket["watch_markets"].append("Draw")
 
+    advance_label = f"{team_a} advance"
     if prob_advance_a >= 0.55:
-        basket["aligned_markets"].append("Team A advance")
+        basket["aligned_markets"].append(advance_label)
     elif prob_advance_a >= 0.45:
-        basket["moderate_markets"].append("Team A advance")
+        basket["moderate_markets"].append(advance_label)
     else:
-        basket["watch_markets"].append("Team A advance")
+        basket["watch_markets"].append(advance_label)
 
     if prob_over_2_5 >= 0.55:
         basket["aligned_markets"].append("Over 2.5 goals")
@@ -775,57 +944,67 @@ def simulate_match(
     return results
 
 
-def market_insight(market, simulation, team_a, team_b, neutral):
+def market_insight(market, market_key, simulation, team_a, team_b, neutral):
     text = []
     exp_a = simulation["expected_goals"][team_a]
     exp_b = simulation["expected_goals"][team_b]
     total = exp_a + exp_b
     is_home = not neutral
 
-    if market == "Team A advance":
+    if market_key == "advance_a":
         text.append(
             f"The model sees {team_a} with an advance probability of {simulation['advance_a']:.1%}. "
             f"If a draw is likely, the higher Elo team benefits from the tiebreaker strength."
         )
-    elif market == "Team A regulation win":
+    elif market_key == "regulation_win_a":
         text.append(
             f"The model estimates {team_a} wins in regulation about {simulation['regulation_win_a']:.1%} of simulations. "
             "Regulation markets often respond to expected goal differentials and relative team momentum."
         )
-    elif market == "Team A -1.5":
+    elif market_key == "team_a_minus_1_5":
         text.append(
-            f"The team A -1.5 probability is based on the chance {team_a} scores 2+ goals, currently {simulation['team_a_minus_1_5']:.1%}. "
-            "This market is usually more attractive when team A has both offensive strength and a weaker away defense."
+            f"The {team_a} -1.5 probability is based on the chance {team_a} scores 2+ goals, currently {simulation['team_a_minus_1_5']:.1%}. "
+            f"This market is usually more attractive when {team_a} has offensive strength and {team_b} has a weaker defense."
         )
-    elif market == "Over 2.5 goals":
+    elif market_key == "regulation_win_b":
+        text.append(
+            f"The model estimates {team_b} wins in regulation about {simulation['regulation_win_b']:.1%} of simulations. "
+            "Regulation markets often respond to expected goal differentials and relative team momentum."
+        )
+    elif market_key == "team_b_minus_1_5":
+        text.append(
+            f"The {team_b} -1.5 probability is based on the chance {team_b} scores 2+ goals, currently {simulation['team_b_minus_1_5']:.1%}. "
+            f"This market is usually more attractive when {team_b} has strong offense and {team_a} has a softer defense."
+        )
+    elif market_key == "over_2_5":
         text.append(
             f"Expected total goals are {total:.2f}. Over 2.5 is estimated at {simulation['over_2_5']:.1%}. "
             "Totals markets typically move on attacking form and lineup risk."
         )
-    elif market == "Under 2.5 goals":
+    elif market_key == "under_2_5":
         text.append(
-            f"Expected total goals are {total:.2f}. Under 2.5 is estimated at {simulation['under_2.5']:.1%}. "
+            f"Expected total goals are {total:.2f}. Under 2.5 is estimated at {simulation['under_2_5']:.1%}. "
             "Low-scoring markets are likely when both defenses are strong and goal expectation is below 2.5."
         )
-    elif market == "BTTS Yes":
+    elif market_key == "btts_yes":
         text.append(
             f"Both teams score in {simulation['btts_yes']:.1%} of simulated matches. "
             "BTTS flow often depends on whether both lineups are likely to attack and concede."
         )
-    elif market == "BTTS No":
+    elif market_key == "btts_no":
         text.append(
             f"No BTTS is estimated at {simulation['btts_no']:.1%}. "
             "This is generally stronger when both teams are defensive or a low open play tempo is expected."
         )
-    elif market == "Team A over 1.5 goals":
+    elif market_key == "team_a_over_1_5":
         text.append(
-            f"The model estimates {team_a} scores at least 2 goals in {simulation['team_a_over_1.5']:.1%} of simulations. "
-            "This market is sensitive to team A's scoring form and the opponent's defensive shape."
+            f"The model estimates {team_a} scores at least 2 goals in {simulation['team_a_over_1_5']:.1%} of simulations. "
+            f"This market is sensitive to {team_a}'s scoring form and {team_b}'s defensive shape."
         )
-    elif market == "Team B over 0.5 goals":
+    elif market_key == "team_b_over_0_5":
         text.append(
-            f"The model estimates {team_b} scores at least 1 goal in {simulation['team_b_over_0.5']:.1%} of simulations. "
-            "A reliable line if the underdog can create enough chances or if team A is not fully defensively compact."
+            f"The model estimates {team_b} scores at least 1 goal in {simulation['team_b_over_0_5']:.1%} of simulations. "
+            f"A reliable line if {team_b} can create enough chances or if {team_a} is not fully defensively compact."
         )
     elif market == "Correct score":
         top = simulation["most_likely_scores"][0] if simulation["most_likely_scores"] else None
@@ -857,23 +1036,39 @@ def compare_to_kalshi(fair_prob, kalshi_prob):
     return fair_prob - kalshi_prob
 
 
-MARKET_OPTIONS = [
-    "Team A advance",
-    "Team A regulation win",
-    "Team A -1.5",
-    "Team B regulation win",
-    "Team B -1.5",
-    "Draw",
-    "Over 2.5 goals",
-    "Under 2.5 goals",
-    "Over 3.5 goals",
-    "Under 1.5 goals",
-    "BTTS Yes",
-    "BTTS No",
-    "Team A over 1.5 goals",
-    "Team B over 0.5 goals",
-    "Correct score",
+MARKET_DEFINITIONS = [
+    ("advance_a", "{home} advance"),
+    ("regulation_win_a", "{home} regulation win"),
+    ("team_a_minus_1_5", "{home} -1.5"),
+    ("regulation_win_b", "{away} regulation win"),
+    ("team_b_minus_1_5", "{away} -1.5"),
+    ("regulation_draw", "Draw"),
+    ("over_2_5", "Over 2.5 goals"),
+    ("under_2_5", "Under 2.5 goals"),
+    ("over_3_5", "Over 3.5 goals"),
+    ("under_1_5", "Under 1.5 goals"),
+    ("btts_yes", "BTTS Yes"),
+    ("btts_no", "BTTS No"),
+    ("team_a_over_1_5", "{home} over 1.5 goals"),
+    ("team_b_over_0_5", "{away} over 0.5 goals"),
 ]
+
+
+def get_market_options(team_a, team_b):
+    return [template.format(home=team_a, away=team_b) for _, template in MARKET_DEFINITIONS] + ["Correct score"]
+
+
+def market_display_to_key(display, team_a, team_b):
+    return {
+        template.format(home=team_a, away=team_b): key
+        for key, template in MARKET_DEFINITIONS
+    }.get(display)
+
+
+def build_market_label(key, team_a, team_b):
+    mapping = dict(MARKET_DEFINITIONS)
+    template = mapping.get(key)
+    return template.format(home=team_a, away=team_b) if template else key
 
 DEFAULT_DEMO_CSV = """date,home_team,away_team,home_goals,away_goals,neutral,competition,home_shots,away_shots,home_shots_on_target,away_shots_on_target,home_corners,away_corners,home_fouls,away_fouls,home_possession,away_possession,home_pass_accuracy,away_pass_accuracy,home_xg,away_xg,home_goal_scorers,away_goal_scorers
 2023-10-05,Spain,Germany,2,1,no,UEFA Nations League,14,9,6,4,7,3,8,12,59,41,86,79,1.9,1.1,Alvarez,Musiala
@@ -905,25 +1100,13 @@ def verdict_from_edge(edge_pct):
     return "STRONG CONSIDERATION"
 
 
-def build_market_summary(simulation, kalshi_prob=None):
-    market_map = {
-        "Team A advance": "advance_a",
-        "Team A regulation win": "regulation_win_a",
-        "Team A -1.5": "team_a_minus_1_5",
-        "Team B regulation win": "regulation_win_b",
-        "Team B -1.5": "team_b_minus_1_5",
-        "Draw": "regulation_draw",
-        "Over 2.5 goals": "over_2_5",
-        "Under 2.5 goals": "under_2.5",
-        "Over 3.5 goals": "over_3_5",
-        "Under 1.5 goals": "under_1_5",
-        "BTTS Yes": "btts_yes",
-        "BTTS No": "btts_no",
-        "Team A over 1.5 goals": "team_a_over_1.5",
-        "Team B over 0.5 goals": "team_b_over_0.5",
-    }
+def build_market_summary(simulation, kalshi_prob=None, team_a=None, team_b=None):
+    if team_a is None or team_b is None:
+        return pd.DataFrame()
+
     rows = []
-    for market, key in market_map.items():
+    for key, template in MARKET_DEFINITIONS:
+        market = template.format(home=team_a, away=team_b)
         probability = float(simulation.get(key, 0.0))
         row = {
             "Market": market,
@@ -1022,15 +1205,52 @@ def main():
         help="Enter the current Kalshi implied probability for the selected market."
     )
 
-    schedule_df = load_world_cup_schedule(api_url=None)
-    schedule_source = "default built-in schedule"
+    schedule_upload = st.sidebar.file_uploader(
+        "Upload World Cup schedule file (JSON or CSV)",
+        type=["json", "csv"],
+        help="Upload a schedule file with date, home_team, away_team, competition, and neutral fields."
+    )
+    schedule_api_url = st.sidebar.text_input(
+        "Live World Cup schedule API URL",
+        value="",
+        help="Optional API endpoint returning a compatible schedule payload. The parser supports FIFA-style Results payloads and common fixtures formats."
+    )
+    use_live_schedule = st.sidebar.checkbox(
+        "Use live World Cup schedule API",
+        value=False,
+        help="When enabled, the app will try to fetch schedule data from the URL above."
+    )
+
+    schedule_df = None
+    schedule_source = "built-in generated schedule"
+
+    if schedule_upload is not None:
+        try:
+            if schedule_upload.name.lower().endswith(".csv"):
+                schedule_df = pd.read_csv(schedule_upload)
+            else:
+                schedule_df = parse_world_cup_schedule(json.load(schedule_upload))
+            schedule_source = "uploaded schedule file"
+        except Exception as exc:
+            st.sidebar.error(f"Unable to read uploaded schedule file: {exc}")
+
+    if schedule_df is None and use_live_schedule and schedule_api_url:
+        schedule_df = load_world_cup_schedule(api_url=schedule_api_url)
+        if not schedule_df.empty:
+            schedule_source = "live schedule API"
+
+    if schedule_df is None or schedule_df.empty:
+        schedule_df = load_world_cup_schedule()
+        if schedule_df.empty:
+            st.error("Unable to load any World Cup schedule data.")
+            return
 
     schedule_df = parse_world_cup_schedule(schedule_df)
     schedule_df["date"] = pd.to_datetime(schedule_df["date"], errors="coerce")
     schedule_df = schedule_df.dropna(subset=["date", "home_team", "away_team"]).sort_values("date")
     upcoming_df = schedule_df[schedule_df["date"] >= pd.Timestamp.now().normalize()]
     if upcoming_df.empty:
-        st.warning("No upcoming World Cup matches found in the loaded schedule. Please upload fresh schedule data or provide a live schedule API.")
+        st.warning("No upcoming World Cup matches found in the loaded schedule. Please upload a fresh schedule or provide a live schedule API.")
         upcoming_df = schedule_df
 
     st.sidebar.markdown(f"**Schedule source:** {schedule_source}")
@@ -1054,7 +1274,9 @@ def main():
         f"{match_row['competition']} | {'Neutral' if neutral else 'Home advantage'}"
     )
 
-    market = st.sidebar.selectbox("Select market", MARKET_OPTIONS)
+    market_options = get_market_options(team_a, team_b)
+    market = st.sidebar.selectbox("Select market", market_options)
+    market_key = market_display_to_key(market, team_a, team_b)
 
     model = build_team_model(
         matches_df,
@@ -1087,38 +1309,12 @@ def main():
     else:
         selected_score = None
 
-    if market == "Team A advance":
-        fair_prob = simulation["advance_a"]
-    elif market == "Team A regulation win":
-        fair_prob = simulation["regulation_win_a"]
-    elif market == "Team B regulation win":
-        fair_prob = simulation["regulation_win_b"]
-    elif market == "Draw":
-        fair_prob = simulation["regulation_draw"]
-    elif market == "Team A -1.5":
-        fair_prob = simulation["team_a_minus_1_5"]
-    elif market == "Team B -1.5":
-        fair_prob = simulation["team_b_minus_1_5"]
-    elif market == "Over 2.5 goals":
-        fair_prob = simulation["over_2_5"]
-    elif market == "Under 2.5 goals":
-        fair_prob = simulation["under_2.5"]
-    elif market == "Over 3.5 goals":
-        fair_prob = simulation["over_3_5"]
-    elif market == "Under 1.5 goals":
-        fair_prob = simulation["under_1_5"]
-    elif market == "BTTS Yes":
-        fair_prob = simulation["btts_yes"]
-    elif market == "BTTS No":
-        fair_prob = simulation["btts_no"]
-    elif market == "Team A over 1.5 goals":
-        fair_prob = simulation["team_a_over_1_5"]
-    elif market == "Team B over 0.5 goals":
-        fair_prob = simulation["team_b_over_0_5"]
-    elif market == "Correct score" and selected_score is not None:
+    if market == "Correct score" and selected_score is not None:
         fair_prob = simulation["correct_score_probs"].get(
             tuple(int(x) for x in selected_score.split("-")), 0.0
         )
+    elif market_key is not None:
+        fair_prob = float(simulation.get(market_key, 0.0))
     else:
         fair_prob = 0.0
 
@@ -1126,7 +1322,7 @@ def main():
     edge = compare_to_kalshi(fair_prob, kalshi_prob)
     edge_pct = edge * 100.0
     verdict = verdict_from_edge(edge_pct)
-    insight = market_insight(market, simulation, team_a, team_b, neutral)
+    insight = market_insight(market, market_key, simulation, team_a, team_b, neutral)
 
     st.header("Thiago value output")
     st.metric("Thiago fair probability", format_percentage(fair_prob))
@@ -1141,7 +1337,7 @@ def main():
     st.write(insight)
 
     st.subheader("All market fair odds")
-    market_table = build_market_summary(simulation, kalshi_prob)
+    market_table = build_market_summary(simulation, kalshi_prob, team_a=team_a, team_b=team_b)
     st.dataframe(market_table)
 
     st.subheader("Match forecast summary")
@@ -1191,19 +1387,19 @@ def main():
 
     st.subheader("Model diagnostics")
     diagnostics = {
-        "Team A Elo": simulation["model_stats"]["elo_a"],
-        "Team B Elo": simulation["model_stats"]["elo_b"],
+        f"{team_a} Elo": simulation["model_stats"]["elo_a"],
+        f"{team_b} Elo": simulation["model_stats"]["elo_b"],
         "Home advantage (goals)": simulation["model_stats"]["home_advantage_goals"],
         "Simulations": simulation["n_sims"],
-        "Team A expected goals": simulation["expected_goals"][team_a],
-        "Team B expected goals": simulation["expected_goals"][team_b],
-        "Team A average simulated goals": simulation["average_goals_a"],
-        "Team B average simulated goals": simulation["average_goals_b"],
+        f"{team_a} expected goals": simulation["expected_goals"][team_a],
+        f"{team_b} expected goals": simulation["expected_goals"][team_b],
+        f"{team_a} average simulated goals": simulation["average_goals_a"],
+        f"{team_b} average simulated goals": simulation["average_goals_b"],
         "Model confidence": simulation["model_confidence"],
-        "Team A weighted matches": simulation["team_a_history"]["weighted_matches"],
-        "Team B weighted matches": simulation["team_b_history"]["weighted_matches"],
-        "Team A adjustment": team_a_adjustment,
-        "Team B adjustment": team_b_adjustment,
+        f"{team_a} weighted matches": simulation["team_a_history"]["weighted_matches"],
+        f"{team_b} weighted matches": simulation["team_b_history"]["weighted_matches"],
+        f"{team_a} adjustment": team_a_adjustment,
+        f"{team_b} adjustment": team_b_adjustment,
     }
     st.json(diagnostics)
 
@@ -1225,9 +1421,9 @@ def main():
             st.metric("Std goals B", f"{monte['std_goals_b']:.2f}")
 
         with st.expander("Goal distribution probabilities"):
-            st.write("Team A goal probabilities")
+            st.write(f"{team_a} goal probabilities")
             st.json(monte["team_a_goal_probs"])
-            st.write("Team B goal probabilities")
+            st.write(f"{team_b} goal probabilities")
             st.json(monte["team_b_goal_probs"])
             st.write("Total goals probabilities")
             st.json(monte["total_goal_probs"])
